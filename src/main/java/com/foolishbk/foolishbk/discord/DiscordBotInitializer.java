@@ -8,6 +8,8 @@ import discord4j.core.DiscordClient;
 import discord4j.core.DiscordClientBuilder;
 import discord4j.core.GatewayDiscordClient;
 
+import java.util.Objects;
+
 @Service
 public class DiscordBotInitializer {
 
@@ -37,7 +39,7 @@ public class DiscordBotInitializer {
                 .subscribe(event -> {
                     String content = event.getMessage().getContent();
                     if (content.equalsIgnoreCase("!ping")) {
-                        event.getMessage().getChannel().block().createMessage("Pong!").block();
+                        Objects.requireNonNull(event.getMessage().getChannel().block()).createMessage("Pong!").block();
                     }
                 });
     }
