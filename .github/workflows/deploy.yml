@@ -44,15 +44,19 @@ jobs:
 
       - name: 🚀 Restart Spring Boot App on EC2
         run: |
-          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
+            echo "🔍 Looking for existing app.jar process..."
             PID=\$(ps aux | grep '[j]ava -jar.*FoolishBK/app.jar' | awk '{print \$2}')
             if [ -n "\$PID" ]; then
-              echo "Killing app.jar process with PID \$PID"
+              echo "🛑 Stopping process \$PID"
               kill \$PID
               sleep 2
             fi
-            echo "Starting app..."
+          
+            echo "🔐 Loading environment variables..."
+            export \$(cat /home/${{ secrets.EC2_USER }}/FoolishBK/.env | xargs)
+          
+            echo "🚀 Starting app..."
             cd /home/${{ secrets.EC2_USER }}/FoolishBK
-            export $(cat .env | xargs)
             nohup java -jar app.jar > app.log 2>&1 &
           EOF
