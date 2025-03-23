@@ -1,6 +1,9 @@
 package com.foolishbk.foolishbk.discord;
 
+import com.foolishbk.foolishbk.discord.commands.CommandManagerService;
+import discord4j.core.event.domain.message.MessageCreateEvent;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import jakarta.annotation.PostConstruct;
@@ -8,9 +11,8 @@ import discord4j.core.DiscordClient;
 import discord4j.core.DiscordClientBuilder;
 import discord4j.core.GatewayDiscordClient;
 
-import java.util.Objects;
-
 @Service
+@RequiredArgsConstructor
 public class DiscordBotInitializer {
 
     @Value("${discord.token}")
@@ -19,29 +21,18 @@ public class DiscordBotInitializer {
     @Getter
     private GatewayDiscordClient client;
 
+    private final CommandManagerService commandManagerService;
+
     @PostConstruct
     public void init() {
-        // Create the Discord client and log in
         DiscordClient discordClient = DiscordClientBuilder.create(token).build();
         client = discordClient.login().block();
         if (client != null) {
             System.out.println("Discord Bot logged in successfully!");
-            // Register any event listeners or commands here
-            registerListeners();
+            client.getEventDispatcher().on(MessageCreateEvent.class)
+                    .subscribe(commandManagerService::handle);
         } else {
             throw new IllegalStateException("Failed to log in to Discord!");
         }
     }
-
-    private void registerListeners() {
-        // Example: Register a simple message listener
-        client.getEventDispatcher().on(discord4j.core.event.domain.message.MessageCreateEvent.class)
-                .subscribe(event -> {
-                    String content = event.getMessage().getContent();
-                    if (content.equalsIgnoreCase("!ping")) {
-                        Objects.requireNonNull(event.getMessage().getChannel().block()).createMessage("Pong!").block();
-                    }
-                });
-    }
-
 }

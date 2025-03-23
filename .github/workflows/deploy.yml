@@ -1,0 +1,58 @@
+name: Deploy Spring Boot to EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v3
+
+      - name: ☕ Set up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: 🛠️ Build with Maven
+        run: mvn clean package -DskipTests
+
+      - name: 🔐 Set up SSH and Known Hosts
+        run: |
+          sudo apt-get update && sudo apt-get install -y rsync
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: 📤 Copy JAR to EC2 using rsync
+        run: |
+          rsync -e "ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" \
+            -avz --no-motd --timeout=30 target/*.jar \
+            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/${{ secrets.EC2_USER }}/FoolishBK/app.jar
+
+      - name: 🔐 Create .env on EC2
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
+            echo "token=${{ secrets.DISCORD_TOKEN }}" > /home/${{ secrets.EC2_USER }}/FoolishBK/.env
+          EOF
+
+      - name: 🚀 Restart Spring Boot App on EC2
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            PID=\$(ps aux | grep '[j]ava -jar.*FoolishBK/app.jar' | awk '{print \$2}')
+            if [ -n "\$PID" ]; then
+              echo "Killing app.jar process with PID \$PID"
+              kill \$PID
+              sleep 2
+            fi
+            echo "Starting app..."
+            cd /home/${{ secrets.EC2_USER }}/FoolishBK
+            export $(cat .env | xargs)
+            nohup java -jar app.jar > app.log 2>&1 &
+          EOF
