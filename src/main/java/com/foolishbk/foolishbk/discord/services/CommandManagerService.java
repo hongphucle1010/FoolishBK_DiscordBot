@@ -1,5 +1,6 @@
-package com.foolishbk.foolishbk.discord.commands;
+package com.foolishbk.foolishbk.discord.services;
 
+import com.foolishbk.foolishbk.discord.commands.Command;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

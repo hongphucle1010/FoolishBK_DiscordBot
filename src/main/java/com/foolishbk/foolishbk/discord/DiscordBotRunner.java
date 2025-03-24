@@ -1,19 +1,21 @@
 package com.foolishbk.foolishbk.discord;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
-@RequiredArgsConstructor
+@Slf4j
 @Component
+@RequiredArgsConstructor
 public class DiscordBotRunner implements CommandLineRunner {
 
     private final DiscordBotInitializer discordBotInitializer;
 
     @Override
-    public void run(String... args) throws Exception {
-        // This will block until the bot disconnects.
+    public void run(String... args) {
+        log.info("DiscordBotRunner: Starting discord bot");
+        // Keep the application alive as long as the bot is connected
         discordBotInitializer.getClient().onDisconnect().block();
     }
 }
